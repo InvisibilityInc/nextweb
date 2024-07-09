@@ -61,6 +61,7 @@ export interface ChatSession {
   clearContextIndex?: number;
   chat_id: string;
   mask: Mask;
+  topicUpdated: Boolean;
 }
 
 export const DEFAULT_TOPIC = Locale.Store.DefaultTopic;
@@ -84,6 +85,7 @@ function createEmptySession(): ChatSession {
     lastSummarizeIndex: 0,
     chat_id: crypto.randomUUID(),
     mask: createEmptyMask(),
+    topicUpdated: false,
   };
 }
 
@@ -318,13 +320,16 @@ export const useChatStore = createPersistStore(
         });
         get().updateStat(message);
         // get().summarizeSession();
+
         const sessions: ChatSession[] = get().sessions;
         const index: number = get().currentSessionIndex;
         const authToken = Cookies.get("auth_token");
         const currentSession: any = get().sessions.at(index);
         const chatId: string = currentSession.chat_id;
-        //what should be present in payload ask
-        if (sessions[index].messages.length === 4) {
+        if (
+          sessions[index].messages.length >= 4 &&
+          currentSession.topicUpdated === false
+        ) {
           const response = await fetch(
             `https://cloak.i.inc/chats/${chatId}/autorename`,
             {
@@ -338,6 +343,7 @@ export const useChatStore = createPersistStore(
           const chat = await response.json();
           get().updateCurrentSession((session) => {
             session.topic = chat.name;
+            session.topicUpdated = true;
           });
         }
       },
