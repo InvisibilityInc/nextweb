@@ -28,9 +28,10 @@ import { useAppConfig } from "../store/config";
 import { AuthPage } from "./auth";
 import { getClientConfig } from "../config/client";
 import { ClientApi } from "../client/api";
-import { useAccessStore } from "../store";
+import { useAccessStore, useChatStore } from "../store";
 import { identifyDefaultClaudeModel } from "../utils/checkers";
 import { useTokenRefresh } from "../utils/hooks";
+import { useSyncStore } from "../store/sync";
 
 export function Loading(props: { noLogo?: boolean }) {
   // TODO fix this loading thing
@@ -135,6 +136,11 @@ function Screen() {
   const shouldTightBorder = true;
   // getClientConfig()?.isApp || (config.tightBorder && !isMobileScreen);
 
+  const sync = useSyncStore().sync;
+  const sessions = useChatStore.getState().sessions;
+  useEffect(() => {
+    sync();
+  }, [sessions, sync]);
   useEffect(() => {
     loadAsyncGoogleFont();
   }, []);
@@ -162,9 +168,9 @@ function Screen() {
             <Routes>
               <Route path={Path.Home} element={<Chat />} />
               <Route path={Path.NewChat} element={<NewChat />} />
-              <Route path={Path.Masks} element={<MaskPage />} />
+              {/* <Route path={Path.Masks} element={<MaskPage />} /> */}
               <Route path={Path.Chat} element={<Chat />} />
-              <Route path={Path.Settings} element={<Settings />} />
+              {/* <Route path={Path.Settings} element={<Settings />} /> */}
             </Routes>
           </div>
         </>

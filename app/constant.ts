@@ -395,6 +395,16 @@ const openaiModels = [
     },
   },
   {
+    model_name: "claude-3-5-sonnet-20240620",
+    display_name: "Claude V3.5 Sonnet",
+    provider: {
+      provider_name: "Anthropic",
+      provider_id: "anthropic",
+      moderation: "Filtered",
+      credential_fields: ["api_key"],
+    },
+  },
+  {
     model_name: "claude-3-haiku-20240307",
     display_name: "Claude V3 Haiku",
     provider: {
