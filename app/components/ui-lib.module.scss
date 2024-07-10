@@ -283,7 +283,7 @@
   position: fixed;
   top: 0;
   left: 0;
-  height: 100vh;
+  height: 100svh;
   width: 100vw;
   background-color: rgba(0, 0, 0, 0.5);
   display: flex;
@@ -296,7 +296,7 @@
     .list {
       width: min(360px,90%);
       margin: auto;
-      max-height: 90vh;
+      max-height: 90svh;
       overflow-x: hidden;
       overflow-y: auto;
 
