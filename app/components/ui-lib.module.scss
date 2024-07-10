@@ -292,7 +292,10 @@
   z-index: 999;
 
   &-content {
+    
     .list {
+      width: min(360px,90%);
+      margin: auto;
       max-height: 90vh;
       overflow-x: hidden;
       overflow-y: auto;
