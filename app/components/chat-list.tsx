@@ -102,14 +102,14 @@ export function ChatItem(props: {
 }
 
 export function ChatList(props: { narrow?: boolean }) {
-  const [sessions, selectedIndex, selectSession, moveSession] = useChatStore(
-    (state) => [
+  const [sessions, selectedIndex, selectSession, moveSession, chats] =
+    useChatStore((state) => [
       state.sessions,
       state.currentSessionIndex,
       state.selectSession,
       state.moveSession,
-    ],
-  );
+      state.chats,
+    ]);
   const chatStore = useChatStore();
   const navigate = useNavigate();
   const isMobileScreen = useMobileScreen();
@@ -141,8 +141,16 @@ export function ChatList(props: { narrow?: boolean }) {
           >
             {sessions.map((item, i) => (
               <ChatItem
-                title={item.topic}
-                time={new Date(item.lastUpdate).toLocaleString()}
+                title={
+                  item.chat_id && chats[item.chat_id]
+                    ? chats[item.chat_id].name || item.topic
+                    : item.topic
+                }
+                time={
+                  item.chat_id && chats[item.chat_id]
+                    ? new Date(chats[item.chat_id].updated_at).toLocaleString()
+                    : new Date(item.lastUpdate).toLocaleString()
+                }
                 count={item.messages.length}
                 key={item.id}
                 id={item.id}

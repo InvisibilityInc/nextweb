@@ -670,7 +670,6 @@ function _Chat() {
   const session = chatStore.currentSession();
   const config = useAppConfig();
   const fontSize = config.fontSize;
-
   const [showExport, setShowExport] = useState(false);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -1227,7 +1226,10 @@ function _Chat() {
             className={`window-header-main-title ${styles["chat-body-main-title"]}`}
             onClickCapture={() => setIsEditingMessage(true)}
           >
-            {!session.topic ? DEFAULT_TOPIC : session.topic}
+            {!session.topic
+              ? DEFAULT_TOPIC
+              : useChatStore.getState().chats[session.chat_id]?.name ??
+                session.topic}
           </div>
           <div className="window-header-sub-title">
             {Locale.Chat.SubTitle(session.messages.length)}
