@@ -100,27 +100,34 @@ function organizeChatMessages(messages: Message[]): OrganizedData {
   }
   return organizedData;
 }
-// Sort messages within each chat ID array based on creation time
-// for (const chatId in organizedData) {
-//   organizedData[chatId].sort((a, b) => {
-//     const dateComparison =
-//       new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
 
-//     if (dateComparison === 0) {
-//       // If the dates are the same, sort by user type
-//       if (a.role === "user" && b.role === "assistant") {
-//         return -1; // User comes first
-//       } else if (a.role === "assistant" && b.role === "user") {
-//         return 1; // Assistant comes first
-//       } else {
-//         // If both are users or both are assistants, maintain the original order
-//         return 0;
-//       }
-//     } else {
-//       return dateComparison;
-//     }
-//   });
-// }
+interface Chat {
+  created_at: string;
+  deleted_at: string | null;
+  id: string;
+  name: string;
+  parent_message_id: string | null;
+  updated_at: string;
+  user_id: string;
+}
+
+export interface ChatWithoutId {
+  created_at: string;
+  deleted_at: string | null;
+  name: string;
+  parent_message_id: string | null;
+  updated_at: string;
+  user_id: string;
+}
+
+function reorganizeChatsToObject(chats: Chat[]): Record<string, ChatWithoutId> {
+  return chats.reduce((acc: Record<string, ChatWithoutId>, chat: Chat) => {
+    const { id, ...rest } = chat;
+    acc[id] = rest;
+    return acc;
+  }, {});
+}
+
 export const useSyncStore = createPersistStore(
   DEFAULT_SYNC_STATE,
   (set, get) => ({
@@ -181,7 +188,10 @@ export const useSyncStore = createPersistStore(
           throw new Error("Failed to sync messages");
         }
         const fetchedMessages = await response.json();
+        console.log(fetchedMessages);
         const extracted = organizeChatMessages(fetchedMessages.messages);
+        const chats = reorganizeChatsToObject(fetchedMessages.chats);
+        useChatStore.getState().setChats(chats);
         const chatIdSet = new Set(Object.keys(extracted));
         const updatedSet: Set<string> = new Set();
 
