@@ -143,14 +143,17 @@ export function ChatList(props: { narrow?: boolean }) {
               <ChatItem
                 title={
                   item.chat_id && chats[item.chat_id]
-                    ? chats[item.chat_id].name || item.topic
+                    ? (item.topic = chats[item.chat_id].name)
                     : item.topic
                 }
-                time={
-                  item.chat_id && chats[item.chat_id]
-                    ? new Date(chats[item.chat_id].updated_at).toLocaleString()
-                    : new Date(item.lastUpdate).toLocaleString()
-                }
+                time={(() => {
+                  if (item.chat_id && chats[item.chat_id]) {
+                    item.lastUpdate = new Date(
+                      chats[item.chat_id].updated_at,
+                    ).getTime();
+                  }
+                  return new Date(item.lastUpdate).toLocaleString();
+                })()}
                 count={item.messages.length}
                 key={item.id}
                 id={item.id}
