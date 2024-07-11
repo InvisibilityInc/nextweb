@@ -24,6 +24,7 @@ import { identifyDefaultClaudeModel } from "../utils/checkers";
 import { collectModelsWithDefaultModel } from "../utils/model";
 import { useAccessStore } from "./access";
 import Cookies from "js-cookie";
+import { ChatWithoutId } from "./sync";
 
 export type ChatMessage = RequestMessage & {
   date: string;
@@ -164,6 +165,7 @@ function fillTemplateWith(input: string, modelConfig: ModelConfig) {
 const DEFAULT_CHAT_STATE = {
   sessions: [createEmptySession()],
   currentSessionIndex: 0,
+  chats: {} as Record<string, ChatWithoutId>,
 };
 
 export const useChatStore = createPersistStore(
@@ -183,7 +185,9 @@ export const useChatStore = createPersistStore(
           currentSessionIndex: 0,
         }));
       },
-
+      setChats(chats: Record<string, ChatWithoutId>) {
+        set({ chats });
+      },
       selectSession(index: number) {
         set({
           currentSessionIndex: index,
@@ -217,11 +221,11 @@ export const useChatStore = createPersistStore(
 
       newSession(mask?: Mask, chat_id?: string, messages?: ChatMessage[]) {
         const session = createEmptySession();
-        if (chat_id && messages) {
-          session.messages;
+        session.messages = [];
+        if (chat_id && messages && messages?.length >= 2) {
+          session.messages = messages;
           session.chat_id = chat_id;
         }
-        session.messages = [];
         if (mask) {
           const config = useAppConfig.getState();
           const globalModelConfig = config.modelConfig;
