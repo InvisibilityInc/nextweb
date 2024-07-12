@@ -61,6 +61,45 @@ interface Message {
 interface OrganizedData {
   [chatId: string]: any[];
 }
+// function organizeChatMessages(messages: Message[]): OrganizedData {
+//   const organizedData: OrganizedData = {};
+//   const options: Intl.DateTimeFormatOptions = {
+//     year: "numeric",
+//     month: "numeric",
+//     day: "numeric",
+//     hour: "numeric",
+//     minute: "numeric",
+//     second: "numeric",
+//     hour12: true,
+//   };
+
+//   // Organize messages by chat ID
+//   for (const message of messages) {
+//     const chatId = message.chat_id;
+//     if (!organizedData[chatId]) {
+//       organizedData[chatId] = [];
+//     }
+//     organizedData[chatId].push({
+//       id: message.id,
+//       role: message.role,
+//       content: message.text,
+//       date: message.created_at,
+//     });
+//   }
+
+//   for (const chatId in organizedData) {
+//     organizedData[chatId].sort((a, b) => {
+//       return new Date(a.date).getTime() - new Date(b.date).getTime();
+//     });
+
+//     organizedData[chatId].forEach((message) => {
+//       message.date = new Intl.DateTimeFormat("en-US", options).format(
+//         new Date(message.date),
+//       );
+//     });
+//   }
+//   return organizedData;
+// }
 function organizeChatMessages(messages: Message[]): OrganizedData {
   const organizedData: OrganizedData = {};
   const options: Intl.DateTimeFormatOptions = {
@@ -88,16 +127,55 @@ function organizeChatMessages(messages: Message[]): OrganizedData {
   }
 
   for (const chatId in organizedData) {
-    organizedData[chatId].sort((a, b) => {
-      return new Date(a.date).getTime() - new Date(b.date).getTime();
-    });
+    const userMessages = organizedData[chatId].filter(
+      (message) => message.role === "user",
+    );
+    const assistantMessages = organizedData[chatId].filter(
+      (message) => message.role !== "user",
+    );
 
-    organizedData[chatId].forEach((message) => {
+    userMessages.sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+    );
+    assistantMessages.sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+    );
+
+    const combinedMessages = [];
+    let assistantIndex = 0;
+
+    for (const userMessage of userMessages) {
+      combinedMessages.push(userMessage);
+      // Find the closest assistant message
+      while (
+        assistantIndex < assistantMessages.length &&
+        new Date(assistantMessages[assistantIndex].date).getTime() <
+          new Date(userMessage.date).getTime()
+      ) {
+        assistantIndex++;
+      }
+      if (assistantIndex < assistantMessages.length) {
+        combinedMessages.push(assistantMessages[assistantIndex]);
+        assistantIndex++;
+      }
+    }
+
+    // Add any remaining assistant messages
+    while (assistantIndex < assistantMessages.length) {
+      combinedMessages.push(assistantMessages[assistantIndex]);
+      assistantIndex++;
+    }
+
+    // Format dates
+    combinedMessages.forEach((message) => {
       message.date = new Intl.DateTimeFormat("en-US", options).format(
         new Date(message.date),
       );
     });
+
+    organizedData[chatId] = combinedMessages;
   }
+
   return organizedData;
 }
 
@@ -188,7 +266,6 @@ export const useSyncStore = createPersistStore(
           throw new Error("Failed to sync messages");
         }
         const fetchedMessages = await response.json();
-        console.log(fetchedMessages);
         const extracted = organizeChatMessages(fetchedMessages.messages);
         const chats = reorganizeChatsToObject(fetchedMessages.chats);
         useChatStore.getState().setChats(chats);
@@ -199,7 +276,6 @@ export const useSyncStore = createPersistStore(
             !chatIdSet.has(session.chat_id) &&
             Object.keys(chats).length > 1
           ) {
-            console.log("delete triggered");
             useChatStore.getState().deleteSession(index);
           }
         });
