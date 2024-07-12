@@ -170,7 +170,7 @@ function Screen() {
               <Route path={Path.NewChat} element={<NewChat />} />
               {/* <Route path={Path.Masks} element={<MaskPage />} /> */}
               <Route path={Path.Chat} element={<Chat />} />
-              {/* <Route path={Path.Settings} element={<Settings />} /> */}
+              <Route path={Path.Settings} element={<Settings />} />
             </Routes>
           </div>
         </>
