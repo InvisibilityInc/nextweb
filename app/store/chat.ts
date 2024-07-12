@@ -258,12 +258,14 @@ export const useChatStore = createPersistStore(
         const deletedSession = get().sessions.at(index);
         const authToken = Cookies.get("auth_token");
 
-        await fetch(`https://cloak.i.inc/chats/${deletedSession?.chat_id}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-          },
-        });
+        if (deletedSession?.chat_id) {
+          await fetch(`https://cloak.i.inc/chats/${deletedSession?.chat_id}`, {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          });
+        }
         if (!deletedSession) return;
 
         const sessions = get().sessions.slice();

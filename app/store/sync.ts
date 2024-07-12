@@ -194,6 +194,15 @@ export const useSyncStore = createPersistStore(
         useChatStore.getState().setChats(chats);
         const chatIdSet = new Set(Object.keys(extracted));
         const updatedSet: Set<string> = new Set();
+        localState["chat-next-web-store"].sessions.forEach((session, index) => {
+          if (
+            !chatIdSet.has(session.chat_id) &&
+            Object.keys(chats).length > 1
+          ) {
+            console.log("delete triggered");
+            useChatStore.getState().deleteSession(index);
+          }
+        });
 
         for (const session of localState["chat-next-web-store"].sessions) {
           const currChatId = session["chat_id"];
@@ -201,18 +210,18 @@ export const useSyncStore = createPersistStore(
             updatedSet.add(currChatId);
             session.messages = extracted[currChatId];
           }
-        }
-        const difference = [...chatIdSet];
-        for (const element of updatedSet) {
-          const index = difference.indexOf(element);
-          if (index !== -1) {
-            difference.splice(index, 1);
+          const difference = [...chatIdSet];
+          for (const element of updatedSet) {
+            const index = difference.indexOf(element);
+            if (index !== -1) {
+              difference.splice(index, 1);
+            }
           }
-        }
 
-        for (const chatId of difference) {
-          const messages: ChatMessage[] = extracted[chatId];
-          useChatStore.getState().newSession(undefined, chatId, messages);
+          for (const chatId of difference) {
+            const messages: ChatMessage[] = extracted[chatId];
+            useChatStore.getState().newSession(undefined, chatId, messages);
+          }
         }
         // setLocalAppState(localState);
       } catch (e) {
