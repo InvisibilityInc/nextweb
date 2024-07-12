@@ -269,37 +269,56 @@ export const useSyncStore = createPersistStore(
         const extracted = organizeChatMessages(fetchedMessages.messages);
         const chats = reorganizeChatsToObject(fetchedMessages.chats);
         useChatStore.getState().setChats(chats);
+
         const chatIdSet = new Set(Object.keys(extracted));
         const updatedSet: Set<string> = new Set();
-        localState["chat-next-web-store"].sessions.forEach((session, index) => {
-          if (
-            !chatIdSet.has(session.chat_id) &&
-            Object.keys(chats).length > 1
-          ) {
-            useChatStore.getState().deleteSession(index);
-          }
-        });
-
-        for (const session of localState["chat-next-web-store"].sessions) {
+        // const localSessions = localState["chat-next-web-store"].sessions;
+        const localSessions = useChatStore.getState().sessions;
+        // Update existing sessions
+        localSessions.forEach((session) => {
           const currChatId = session["chat_id"];
           if (chatIdSet.has(currChatId)) {
             updatedSet.add(currChatId);
             session.messages = extracted[currChatId];
           }
-          const difference = [...chatIdSet];
-          for (const element of updatedSet) {
-            const index = difference.indexOf(element);
-            if (index !== -1) {
-              difference.splice(index, 1);
-            }
-          }
+        });
 
-          for (const chatId of difference) {
-            const messages: ChatMessage[] = extracted[chatId];
-            useChatStore.getState().newSession(undefined, chatId, messages);
-          }
-        }
-        // setLocalAppState(localState);
+        // Identify new chat IDs
+        const newChatIds = Array.from(chatIdSet).filter(
+          (chatId) => !updatedSet.has(chatId),
+        );
+
+        // Log new chat IDs for debugging
+        console.log("New chat IDs:", newChatIds);
+
+        // Create new sessions for new chat IDs
+        newChatIds.forEach((chatId) => {
+          const messages: ChatMessage[] = extracted[chatId];
+          console.log(
+            "Creating new session for chatId:",
+            chatId,
+            "with messages:",
+            messages,
+          );
+          useChatStore.getState().newSession(undefined, chatId, messages);
+        });
+
+        // Remove duplicate sessions by ensuring unique chat IDs
+        const uniqueSessions = Array.from(
+          new Map(
+            localSessions.map((session) => [session.chat_id, session]),
+          ).values(),
+        );
+        uniqueSessions.filter((session) => chatIdSet.has(session.chat_id));
+
+        // Update the local state with unique sessions
+        useChatStore.getState().sessions = uniqueSessions;
+        localState["chat-next-web-store"].sessions = uniqueSessions;
+
+        console.log(
+          "Final sessions:",
+          localState["chat-next-web-store"].sessions,
+        );
       } catch (e) {
         console.log("[Sync] failed to get remote state", e);
         throw e;
