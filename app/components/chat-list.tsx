@@ -113,7 +113,22 @@ export function ChatList(props: { narrow?: boolean }) {
   const chatStore = useChatStore();
   const navigate = useNavigate();
   const isMobileScreen = useMobileScreen();
+  if (sessions.length > 1) {
+    sessions.sort((a, b) => {
+      const chatA = chats[a.chat_id];
+      const chatB = chats[b.chat_id];
 
+      // Fallback to a.mask.createdAt if chatA or chatB is undefined or has no created_at
+      const dateA = chatA
+        ? new Date(chatA.created_at || a.mask.createdAt).getTime()
+        : new Date(a.mask.createdAt).getTime();
+      const dateB = chatB
+        ? new Date(chatB.created_at || b.mask.createdAt).getTime()
+        : new Date(b.mask.createdAt).getTime();
+
+      return dateB - dateA;
+    });
+  }
   const onDragEnd: OnDragEndResponder = (result) => {
     const { destination, source } = result;
     if (!destination) {

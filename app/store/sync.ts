@@ -288,18 +288,9 @@ export const useSyncStore = createPersistStore(
           (chatId) => !updatedSet.has(chatId),
         );
 
-        // Log new chat IDs for debugging
-        console.log("New chat IDs:", newChatIds);
-
         // Create new sessions for new chat IDs
         newChatIds.forEach((chatId) => {
           const messages: ChatMessage[] = extracted[chatId];
-          console.log(
-            "Creating new session for chatId:",
-            chatId,
-            "with messages:",
-            messages,
-          );
           useChatStore.getState().newSession(undefined, chatId, messages);
         });
 
@@ -314,11 +305,6 @@ export const useSyncStore = createPersistStore(
         // Update the local state with unique sessions
         useChatStore.getState().sessions = uniqueSessions;
         localState["chat-next-web-store"].sessions = uniqueSessions;
-
-        console.log(
-          "Final sessions:",
-          localState["chat-next-web-store"].sessions,
-        );
       } catch (e) {
         console.log("[Sync] failed to get remote state", e);
         throw e;
