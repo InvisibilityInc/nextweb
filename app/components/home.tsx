@@ -136,11 +136,6 @@ function Screen() {
   const shouldTightBorder = true;
   // getClientConfig()?.isApp || (config.tightBorder && !isMobileScreen);
 
-  const sync = useSyncStore().sync;
-  const sessions = useChatStore.getState().sessions;
-  useEffect(() => {
-    sync();
-  }, [sessions, sync]);
   useEffect(() => {
     loadAsyncGoogleFont();
   }, []);
@@ -203,12 +198,31 @@ export function Home() {
   useSwitchTheme();
   // useLoadData();
   useHtmlLang();
+  const { sync } = useChatStore((state) => ({
+    sync: state.sync,
+  }));
+
+  const [isSyncing, setIsSyncing] = useState(true);
 
   useEffect(() => {
     useAccessStore.getState().fetch();
   }, []);
 
-  if (!useHasHydrated()) {
+  useEffect(() => {
+    async function initializeAndSync() {
+      setIsSyncing(true);
+      try {
+        await sync();
+      } catch (error) {
+        console.error("Initialization or sync failed:", error);
+      } finally {
+        setIsSyncing(false);
+      }
+    }
+
+    initializeAndSync();
+  }, [sync]);
+  if (!useHasHydrated() || isSyncing) {
     return <Loading />;
   }
 

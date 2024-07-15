@@ -24,7 +24,6 @@ import { identifyDefaultClaudeModel } from "../utils/checkers";
 import { collectModelsWithDefaultModel } from "../utils/model";
 import { useAccessStore } from "./access";
 import Cookies from "js-cookie";
-import { ChatWithoutId } from "./sync";
 
 export type ChatMessage = RequestMessage & {
   date: string;
@@ -64,13 +63,129 @@ export interface ChatSession {
   mask: Mask;
   topicUpdated: Boolean;
 }
+interface Message {
+  chat_id: string;
+  created_at: string;
+  id: string;
+  model_id: string;
+  regenerated: boolean;
+  role: string;
+  text: string;
+  updated_at: string;
+  user_id: string;
+}
+interface OrganizedData {
+  [chatId: string]: any[];
+}
+interface Chat {
+  created_at: string;
+  deleted_at: string | null;
+  id: string;
+  name: string;
+  parent_message_id: string | null;
+  updated_at: string;
+  user_id: string;
+}
 
+interface ChatWithoutId {
+  created_at: string;
+  deleted_at: string | null;
+  name: string;
+  parent_message_id: string | null;
+  updated_at: string;
+  user_id: string;
+}
 export const DEFAULT_TOPIC = Locale.Store.DefaultTopic;
 export const BOT_HELLO: ChatMessage = createMessage({
   role: "assistant",
   content: Locale.Store.BotHello,
 });
+function organizeChatMessages(messages: Message[]): OrganizedData {
+  const organizedData: OrganizedData = {};
+  const options: Intl.DateTimeFormatOptions = {
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+    hour12: true,
+  };
 
+  // Organize messages by chat ID
+  for (const message of messages) {
+    const chatId = message.chat_id;
+    if (!organizedData[chatId]) {
+      organizedData[chatId] = [];
+    }
+    organizedData[chatId].push({
+      id: message.id,
+      role: message.role,
+      content: message.text,
+      date: message.created_at,
+    });
+  }
+
+  for (const chatId in organizedData) {
+    const userMessages = organizedData[chatId].filter(
+      (message) => message.role === "user",
+    );
+    const assistantMessages = organizedData[chatId].filter(
+      (message) => message.role !== "user",
+    );
+
+    userMessages.sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+    );
+    assistantMessages.sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+    );
+
+    const combinedMessages = [];
+    let assistantIndex = 0;
+
+    for (const userMessage of userMessages) {
+      combinedMessages.push(userMessage);
+      // Find the closest assistant message
+      while (
+        assistantIndex < assistantMessages.length &&
+        new Date(assistantMessages[assistantIndex].date).getTime() <
+          new Date(userMessage.date).getTime()
+      ) {
+        assistantIndex++;
+      }
+      if (assistantIndex < assistantMessages.length) {
+        combinedMessages.push(assistantMessages[assistantIndex]);
+        assistantIndex++;
+      }
+    }
+
+    // Add any remaining assistant messages
+    while (assistantIndex < assistantMessages.length) {
+      combinedMessages.push(assistantMessages[assistantIndex]);
+      assistantIndex++;
+    }
+
+    // Format dates
+    combinedMessages.forEach((message) => {
+      message.date = new Intl.DateTimeFormat("en-US", options).format(
+        new Date(message.date),
+      );
+    });
+
+    organizedData[chatId] = combinedMessages;
+  }
+
+  return organizedData;
+}
+
+function reorganizeChatsToObject(chats: Chat[]): Record<string, ChatWithoutId> {
+  return chats.reduce((acc: Record<string, ChatWithoutId>, chat: Chat) => {
+    const { id, ...rest } = chat;
+    acc[id] = rest;
+    return acc;
+  }, {});
+}
 function createEmptySession(): ChatSession {
   return {
     id: nanoid(),
@@ -219,12 +334,31 @@ export const useChatStore = createPersistStore(
         });
       },
 
-      newSession(mask?: Mask, chat_id?: string, messages?: ChatMessage[]) {
+      async newSession(
+        mask?: Mask,
+        chat_id?: string,
+        messages?: ChatMessage[],
+      ) {
         const session = createEmptySession();
+        const authToken = Cookies.get("auth_token");
         session.messages = [];
-        if (chat_id && messages && messages?.length >= 2) {
+        if (chat_id && messages && messages?.length > 2) {
           session.messages = messages;
           session.chat_id = chat_id;
+          if (session.topic === DEFAULT_TOPIC) {
+            const response = await fetch(
+              `https://cloak.i.inc/chats/${session.chat_id}/autorename`,
+              {
+                method: "PUT",
+                headers: {
+                  Authorization: `Bearer ${authToken}`,
+                },
+              },
+            );
+            if (!response.ok) console.log("Error while fetching autorename");
+            const chat = await response.json();
+            session.topic = chat.name;
+          }
         }
         if (mask) {
           const config = useAppConfig.getState();
@@ -318,6 +452,67 @@ export const useChatStore = createPersistStore(
 
         return session;
       },
+      async sync() {
+        const authToken = Cookies.get("auth_token");
+
+        try {
+          const response = await fetch("https://cloak.i.inc/sync/all", {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          });
+          if (!response.ok) {
+            throw new Error("Failed to sync messages");
+          }
+          const fetchedMessages = await response.json();
+          const extracted = organizeChatMessages(fetchedMessages.messages);
+          const chats = reorganizeChatsToObject(fetchedMessages.chats);
+          get().setChats(chats);
+
+          const chatIdSet = new Set(Object.keys(extracted));
+          const updatedSet: Set<string> = new Set();
+          const localSessions = get().sessions;
+
+          // Update existing sessions
+          localSessions.forEach((session) => {
+            const currChatId = session["chat_id"];
+            if (chatIdSet.has(currChatId)) {
+              updatedSet.add(currChatId);
+              session.messages = extracted[currChatId];
+            }
+          });
+
+          // Identify new chat IDs
+          const newChatIds = Array.from(chatIdSet).filter(
+            (chatId) => !updatedSet.has(chatId),
+          );
+
+          // Create new sessions for new chat IDs
+          newChatIds.forEach((chatId) => {
+            const messages: ChatMessage[] = extracted[chatId];
+            get().newSession(undefined, chatId, messages);
+          });
+
+          // Remove duplicate sessions by ensuring unique chat IDs
+          const uniqueSessions = Array.from(
+            new Map(
+              localSessions.map((session) => [session.chat_id, session]),
+            ).values(),
+          );
+          const filteredSessions = uniqueSessions.filter((session) =>
+            chatIdSet.has(session.chat_id),
+          );
+
+          // Update the local state with unique sessions
+          set(() => ({
+            sessions: filteredSessions,
+          }));
+        } catch (e) {
+          console.log("[Sync] failed to get remote state", e);
+          throw e;
+        }
+      },
 
       async onNewMessage(message: ChatMessage) {
         get().updateCurrentSession((session) => {
@@ -333,7 +528,7 @@ export const useChatStore = createPersistStore(
         const currentSession: any = get().sessions.at(index);
         const chatId: string = currentSession.chat_id;
         if (
-          sessions[index].messages.length >= 4 &&
+          sessions[index].messages.length > 2 &&
           currentSession.topicUpdated === false
         ) {
           const response = await fetch(
