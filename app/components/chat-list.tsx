@@ -8,7 +8,7 @@ import {
   OnDragEndResponder,
 } from "@hello-pangea/dnd";
 
-import { useChatStore } from "../store";
+import { options, useChatStore } from "../store";
 
 import Locale from "../locales";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -156,18 +156,15 @@ export function ChatList(props: { narrow?: boolean }) {
           >
             {sessions.map((item, i) => (
               <ChatItem
-                title={
-                  item.chat_id && chats[item.chat_id]
-                    ? (item.topic = chats[item.chat_id].name)
-                    : item.topic
-                }
+                title={item.topic}
                 time={(() => {
                   if (item.chat_id && chats[item.chat_id]) {
-                    item.lastUpdate = new Date(
-                      chats[item.chat_id].updated_at,
-                    ).getTime();
+                    let date = new Date(chats[item.chat_id].created_at);
+                    return new Intl.DateTimeFormat("en-US", options).format(
+                      date,
+                    );
                   }
-                  return new Date(item.lastUpdate).toLocaleString();
+                  return "";
                 })()}
                 count={item.messages.length}
                 key={item.id}
