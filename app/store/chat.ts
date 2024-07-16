@@ -341,11 +341,13 @@ export const useChatStore = createPersistStore(
         messages?: ChatMessage[],
       ) {
         const session = createEmptySession();
+        const chats = get().chats;
         const authToken = Cookies.get("auth_token");
         session.messages = [];
         if (chat_id && messages && messages?.length > 2) {
           session.messages = messages;
           session.chat_id = chat_id;
+          session.topic = chats[chat_id].name;
           if (session.topic === DEFAULT_TOPIC) {
             const response = await fetch(
               `https://cloak.i.inc/chats/${session.chat_id}/autorename`,
@@ -372,7 +374,6 @@ export const useChatStore = createPersistStore(
               ...mask.modelConfig,
             },
           };
-          session.topic = mask.name;
         }
 
         set((state) => ({
@@ -504,11 +505,15 @@ export const useChatStore = createPersistStore(
           const filteredSessions = uniqueSessions.filter((session) =>
             chatIdSet.has(session.chat_id),
           );
-
           // Update the local state with unique sessions
-          set(() => ({
-            sessions: filteredSessions,
-          }));
+          if (filteredSessions.length < 1)
+            set(() => ({
+              sessions: get().sessions,
+            }));
+          else
+            set(() => ({
+              sessions: filteredSessions,
+            }));
         } catch (e) {
           console.log("[Sync] failed to get remote state", e);
           throw e;
