@@ -176,7 +176,7 @@ export function SideBar(props: { className?: string }) {
       )}
       <div
         className={styles["sidebar-header-bar"]}
-        style={{ marginBottom: "10px" }}
+        style={{ marginBottom: "10px", alignItems: "flex-end" }}
       >
         <IconButton
           icon={<ExploreIcon />}
