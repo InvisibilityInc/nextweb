@@ -24,7 +24,7 @@ export function ChatItem(props: {
   onDelete?: () => void;
   title: string;
   count: number;
-  time: string;
+  time?: string;
   selected: boolean;
   id: string;
   index: number;
@@ -157,15 +157,18 @@ export function ChatList(props: { narrow?: boolean }) {
             {sessions.map((item, i) => (
               <ChatItem
                 title={item.topic}
-                time={(() => {
-                  if (item.chat_id && chats[item.chat_id]) {
-                    let date = new Date(chats[item.chat_id].created_at);
-                    return new Intl.DateTimeFormat("en-US", options).format(
-                      date,
-                    );
-                  }
-                  return "";
-                })()}
+                time={
+                  ""
+                  //   (() => {
+                  //   if (item.chat_id && chats[item.chat_id]) {
+                  //     let date = new Date(chats[item.chat_id].created_at);
+                  //     return new Intl.DateTimeFormat("en-US", options).format(
+                  //       date,
+                  //     );
+                  //   }
+                  //   return "";
+                  // })()
+                }
                 count={item.messages.length}
                 key={item.id}
                 id={item.id}
