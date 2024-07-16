@@ -1,7 +1,5 @@
-import { useEffect, useRef, useMemo } from "react";
-
+import { useEffect, useRef, useMemo, useState } from "react";
 import styles from "./home.module.scss";
-
 import { IconButton } from "./button";
 import SettingsIcon from "../icons/settings.svg";
 import GithubIcon from "../icons/github.svg";
@@ -13,6 +11,7 @@ import PluginIcon from "../icons/plugin.svg";
 import BotIcon from "../icons/bot.png";
 import DragIcon from "../icons/drag.svg";
 import LogoutIcon from "../icons/logout.svg";
+import ExploreIcon from "../icons/Explore.svg";
 
 import Locale from "../locales";
 
@@ -59,7 +58,6 @@ function useHotKey() {
 
 function useDragSideBar() {
   const limit = (x: number) => Math.min(MAX_SIDEBAR_WIDTH, x);
-
   const config = useAppConfig();
   const startX = useRef(0);
   const startDragWidth = useRef(config.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH);
@@ -157,22 +155,39 @@ export function SideBar(props: { className?: string }) {
         transition: isMobileScreen && isIOSMobile ? "none" : undefined,
       }}
     >
-      <div className={styles["sidebar-header"]} data-tauri-drag-region>
-        <div className={styles["sidebar-title"]} data-tauri-drag-region>
-          Invisibility
+      {config.sidebarWidth !== NARROW_SIDEBAR_WIDTH && (
+        <div className={styles["sidebar-header"]} data-tauri-drag-region>
+          <div className={styles["sidebar-title"]} data-tauri-drag-region>
+            Invisibility
+          </div>
+          <div className={styles["sidebar-sub-title"]}>
+            Chat with your Invisible AI{" "}
+          </div>
+          {config.sidebarWidth > 280 && (
+            <div className={styles["sidebar-logo"] + " no-dark"}>
+              <img
+                src={BotIcon.src}
+                alt=""
+                style={{ width: "75px", height: "75px" }}
+              />
+            </div>
+          )}
         </div>
-        <div className={styles["sidebar-sub-title"]}>
-          Chat with your Invisible AI{" "}
-        </div>
-        {/* <div className={styles["sidebar-logo"] + " no-dark"}> */}
-        {/*     <img */}
-        {/*         src={BotIcon.src} */}
-        {/*         alt="logo" */}
-        {/*         style={{ width: '100%', height: 'auto' }} */}
-        {/*     /> */}
-        {/* </div> */}
+      )}
+      <div
+        className={styles["sidebar-header-bar"]}
+        style={{ marginBottom: "10px" }}
+      >
+        <IconButton
+          icon={<ExploreIcon />}
+          text={shouldNarrow ? undefined : "Explore Invisibility"}
+          className={styles["sidebar-bar-button"]}
+          onClick={() => {
+            navigateToExternalSite("https://www.i.inc/");
+          }}
+          shadow
+        />
       </div>
-
       <div className={styles["sidebar-header-bar"]}>
         {isLoggedin ? (
           <IconButton
@@ -242,11 +257,11 @@ export function SideBar(props: { className?: string }) {
               }}
             />
           </div>
-          {/* <div className={styles["sidebar-action"]}>
+          <div className={styles["sidebar-action"]}>
             <Link to={Path.Settings}>
               <IconButton icon={<SettingsIcon />} shadow />
             </Link>
-          </div> */}
+          </div>
           <div className={styles["sidebar-action"]}>
             <a href={REPO_URL} target="_blank" rel="noopener noreferrer">
               <IconButton icon={<GithubIcon />} shadow />
