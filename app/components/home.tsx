@@ -31,10 +31,8 @@ import { ClientApi } from "../client/api";
 import { useAccessStore, useChatStore } from "../store";
 import { identifyDefaultClaudeModel } from "../utils/checkers";
 import { useTokenRefresh } from "../utils/hooks";
-import { useSyncStore } from "../store/sync";
 
 export function Loading(props: { noLogo?: boolean }) {
-  // TODO fix this loading thing
   return (
     <div className={styles["loading-content"] + " no-dark"}>
       {/* {!props.noLogo && <img src={BotIcon.src} alt="logo" />} */}
@@ -53,10 +51,6 @@ const Chat = dynamic(async () => (await import("./chat")).Chat, {
 });
 
 const NewChat = dynamic(async () => (await import("./new-chat")).NewChat, {
-  loading: () => <Loading noLogo />,
-});
-
-const MaskPage = dynamic(async () => (await import("./mask")).MaskPage, {
   loading: () => <Loading noLogo />,
 });
 
@@ -139,7 +133,6 @@ function Screen() {
   useEffect(() => {
     loadAsyncGoogleFont();
   }, []);
-  // const isLoggedIn = useAccessStore.getState().isLoggedin;
   useTokenRefresh();
 
   return (
