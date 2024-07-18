@@ -366,3 +366,12 @@ pre {
 .copyable {
   user-select: text;
 }
+
+.setting-model-select{
+  width: min(400px,75%);
+
+  select{
+    width: 100%;
+  }
+}
+

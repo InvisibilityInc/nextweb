@@ -743,9 +743,9 @@ export function Settings() {
             ></InputRange>
           </ListItem>
         </List>
-
         <List>
           <ModelConfigList
+            styleClass="setting-model-select"
             modelConfig={config.modelConfig}
             updateConfig={(updater) => {
               const modelConfig = { ...config.modelConfig };

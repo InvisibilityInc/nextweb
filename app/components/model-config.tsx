@@ -8,6 +8,7 @@ import { useAllModels } from "../utils/hooks";
 export function ModelConfigList(props: {
   modelConfig: ModelConfig;
   updateConfig: (updater: (config: ModelConfig) => void) => void;
+  styleClass?: string;
 }) {
   const allModels = useAllModels();
 
@@ -15,6 +16,7 @@ export function ModelConfigList(props: {
     <>
       <ListItem title={Locale.Settings.Model}>
         <Select
+          className={props.styleClass}
           value={props.modelConfig.model}
           onChange={(e) => {
             props.updateConfig(
