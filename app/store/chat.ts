@@ -916,9 +916,34 @@ export const useChatStore = createPersistStore(
         set(() => ({ sessions }));
       },
 
-      clearAllData() {
-        localStorage.clear();
-        location.reload();
+      async clearAllData() {
+        const sessions = get().sessions;
+        const authToken = Cookies.get("auth_token");
+
+        try {
+          const deleteRequests = sessions.map((session: ChatSession) => {
+            if (session.chat_id) {
+              return fetch(`https://cloak.i.inc/chats/${session.chat_id}`, {
+                method: "DELETE",
+                headers: {
+                  Authorization: `Bearer ${authToken}`,
+                },
+              }).then((response) => {
+                if (!response.ok) {
+                  throw new Error(`Failed to delete chat ${session.topic}`);
+                }
+              });
+            }
+            return Promise.resolve();
+          });
+
+          await Promise.all(deleteRequests);
+          get().clearSessions();
+          localStorage.clear();
+          location.reload();
+        } catch (e) {
+          console.error("Error during clearAllData:", e);
+        }
       },
     };
 
