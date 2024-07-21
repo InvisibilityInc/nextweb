@@ -74,9 +74,27 @@ interface Message {
   updated_at: string;
   user_id: string;
 }
-interface OrganizedData {
-  [chatId: string]: any[];
+interface File {
+  id: string;
+  chat_id: string;
+  user_id: string;
+  message_id: string;
+  filetype: string;
+  showtouser: boolean;
+  url: string;
+  created_at: string;
+  updated_at: string;
 }
+interface OrganizedMessage {
+  id: string;
+  role: string;
+  content: string | MultimodalContent[];
+  date: string;
+}
+interface OrganizedData {
+  [chatId: string]: OrganizedMessage[];
+}
+
 interface Chat {
   created_at: string;
   deleted_at: string | null;
@@ -110,19 +128,46 @@ export const options: Intl.DateTimeFormatOptions = {
   second: "numeric",
   hour12: true,
 };
-function organizeChatMessages(messages: Message[]): OrganizedData {
+function organizeChatMessages(
+  messages: Message[],
+  files: File[],
+): OrganizedData {
   const organizedData: OrganizedData = {};
+  const fileMap = new Map<string, File[]>();
 
   // Organize messages by chat ID
+  for (const file of files) {
+    const key = `${file.chat_id}:${file.message_id}`;
+    if (!fileMap.has(key)) {
+      fileMap.set(key, []);
+    }
+    fileMap.get(key!)?.push(file);
+  }
+  console.log("organizedFiles", fileMap);
   for (const message of messages) {
     const chatId = message.chat_id;
     if (!organizedData[chatId]) {
       organizedData[chatId] = [];
     }
+    const key = `${chatId}:${message.id}`;
+    const associatedFiles: File[] = fileMap.get(key) || [];
+    let content: string | MultimodalContent[];
+
+    if (associatedFiles.length === 0) {
+      content = message.text;
+    } else {
+      content = [
+        { type: "text" as const, text: message.text },
+        ...associatedFiles.map((file) => ({
+          type: "image_url" as const,
+          image_url: { url: file.url },
+        })),
+      ];
+    }
     organizedData[chatId].push({
       id: message.id,
       role: message.role,
-      content: message.text,
+      content,
       date: message.created_at,
     });
   }
@@ -468,7 +513,10 @@ export const useChatStore = createPersistStore(
             throw new Error("Failed to sync messages");
           }
           const fetchedMessages = await response.json();
-          const extracted = organizeChatMessages(fetchedMessages.messages);
+          const extracted = organizeChatMessages(
+            fetchedMessages.messages,
+            fetchedMessages.files,
+          );
           const chats = reorganizeChatsToObject(fetchedMessages.chats);
           get().setChats(chats);
 
@@ -534,7 +582,7 @@ export const useChatStore = createPersistStore(
         const currentSession: any = get().sessions.at(index);
         const chatId: string = currentSession.chat_id;
         if (
-          sessions[index].messages.length > 2 &&
+          sessions[index].messages.length >= 2 &&
           currentSession.topicUpdated === false
         ) {
           const response = await fetch(

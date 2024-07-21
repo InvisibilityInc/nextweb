@@ -671,7 +671,7 @@ function _Chat() {
   const config = useAppConfig();
   const fontSize = config.fontSize;
   const [showExport, setShowExport] = useState(false);
-
+  console.log(session);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [userInput, setUserInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
